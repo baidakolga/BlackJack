@@ -95,9 +95,9 @@ class BlackJackGame:
 
     def result(self):
         if self.player_score > 21:
-            print('Игрок проиграл. Ебаный рот этого казино, блять!')
+            print('Игрок проиграл.')
         elif self.player_score == self.dealer_score:
-            print('Ничья. Но ты все равно ЛОХ')
+            print('Ничья.')
         elif self.player_score == 21:
             print('BlackJack! Игрок выиграл')
         elif self.player_score > self.dealer_score:
@@ -105,7 +105,7 @@ class BlackJackGame:
         elif self.player_score < self.dealer_score and self.dealer_score > 21:
             print('Игрок выиграл')
         else:
-            print('Игрок проиграл. Ебаный рот этого казино, блять!')
+            print('Игрок проиграл.')
 
     def clear_table(self):
         self.dealer_score = 0
