@@ -117,7 +117,7 @@ class BlackJackGame:
         self.player_strategy()
         self.dealer_strategy()
         self.result()
-
+        
 
 
 game1 = BlackJackGame()

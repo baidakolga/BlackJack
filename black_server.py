@@ -1,4 +1,7 @@
 import random
+import socket
+
+# GAME PART
 
 deck_of_cards = {
     '2': 2,
@@ -30,14 +33,10 @@ class BlackJackGame:
         list_of_decks.append(i)
     one_deck = list_of_decks * 4
 
-
-    def number_of_decks(self):
-        number = input('Введи количество колод. Максимальное количество колод - 8 ')
+    def number_of_decks(self, number):
         if 1 <= int(number) <= 8:
             self.all_decks = self.one_deck * int(number)
             random.shuffle(self.all_decks)
-            # print(self.all_decks)
-            # print(len(self.all_decks))
         else:
             print('Введено неверное количество колод. Попробуй еще!')
 
@@ -58,13 +57,16 @@ class BlackJackGame:
             self.player_score += deck_of_cards[item]
         if self.player_score < 12 and 'ace' in self.hand_of_player:
             self.player_score += 10
-        print(f'У дилера {self.hand_of_dealer[0]} *\nУ игрока {self.hand_of_player[0]} {self.hand_of_player[1]}')
+        message = f'У дилера {self.hand_of_dealer[0]} *\nУ игрока {self.hand_of_player[0]} {self.hand_of_player[1]}'
+        return message
 
     def ace_check(self, score, hand):
         if score < 12 and 'ace' in hand:
             score += 10
 
     def dealer_strategy(self):
+        hand = ''
+        score = ''
         if self.dealer_score < 17:
             while self.dealer_score < 17:
                 next_card_of_dealer = self.all_decks.pop()
@@ -72,15 +74,17 @@ class BlackJackGame:
                 self.dealer_score += deck_of_cards[next_card_of_dealer]
                 if next_card_of_dealer == 'ace' and self.dealer_score < 12:
                     self.dealer_score += 10
-            print(f'у дилера сумма очков {self.dealer_score}')
+            score = f'у дилера сумма очков {self.dealer_score}'
         elif self.dealer_score == 21:
-            print(f'У дилера сумма очков {self.dealer_score}. BlackJack')
+            score = f'У дилера сумма очков {self.dealer_score}. BlackJack'
         else:
-            print(f'У дилера сумма очков {self.dealer_score}')
-        print(self.hand_of_dealer)
+            score = f'У дилера сумма очков {self.dealer_score}'
+        hand = ' '.join(self.hand_of_dealer)
+        return score, hand
 
-    def player_strategy(self):
-        act = input('Чтобы взять карту введи "hit" ')
+    def player_strategy(self, act):
+        hand = ''
+        score = ''
         if act == 'hit':
             next_card_of_player = self.all_decks.pop()
             self.hand_of_player.append(next_card_of_player)
@@ -91,37 +95,56 @@ class BlackJackGame:
         else:
             pass
         if self.player_score == 21:
-            print(f'У игрока сумма очков {self.player_score}. BlackJack')
+            score = f'У игрока сумма очков {self.player_score}. BlackJack'
         else:
-            print(f'У игрока сумма очков {self.player_score}')
-        print(self.hand_of_player)
+            score = f'У игрока сумма очков {self.player_score}'
+        hand = ' '.join(self.hand_of_player)
+        return score, hand
 
     def result(self):
+        WIN = 'Игрок выиграл'
+        BALCK_JACK = 'BlackJack! Игрок выиграл'
+        LOOSE ='Игрок проиграл.'
+        NONE = 'Ничья.'
         if self.player_score > 21:
-            print('Игрок проиграл.')
+            message = LOOSE
+            return message
         elif self.player_score == self.dealer_score:
-            print('Ничья.')
+            message = NONE
+            return message
         elif self.player_score == 21:
-            print('BlackJack! Игрок выиграл')
+            message = BALCK_JACK
+            return message
         elif self.player_score > self.dealer_score:
-            print('Игрок выиграл')
+            message = WIN
+            return message
         elif self.player_score < self.dealer_score and self.dealer_score > 21:
-            print('Игрок выиграл')
+            message = WIN
+            return message
         else:
-            print('Игрок проиграл.')
+            message = LOOSE
+            return message
 
-
-    def play(self):
-        self.number_of_decks()
+    def play(self, num, act):
+        self.number_of_decks(num)
         self.distribution_of_cards()
-        self.player_strategy()
+        self.player_strategy(act)
         self.dealer_strategy()
         self.result()
 
 
+# SERVER PART
 
-game1 = BlackJackGame()
-game1.play()
+sock = socket.socket()
+sock.bind(('', 9090))
+sock.listen(1)
+conn, addr = sock.accept()
 
-game2 = BlackJackGame()
-game2.play()
+while True:
+    sock.send(b'wanna, play?')
+    data = conn.recv(1024)
+    if not data:
+        break
+    conn.send(data.upper())
+
+conn.close()
