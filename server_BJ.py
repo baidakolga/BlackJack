@@ -1,7 +1,10 @@
 import random
 import socket
+sock = socket.socket()
+sock.bind(('', 9000))
+sock.listen(1)
+conn, addr = sock.accept()
 
-# GAME PART
 
 deck_of_cards = {
     '2': 2,
@@ -33,12 +36,16 @@ class BlackJackGame:
         list_of_decks.append(i)
     one_deck = list_of_decks * 4
 
-    def number_of_decks(self, number):
+    def number_of_decks(self):
+        conn.send('Введи количество колод. Максимальное количество колод - 8 '.encode('utf-8'))
+        number = conn.recv(1024)
         if 1 <= int(number) <= 8:
             self.all_decks = self.one_deck * int(number)
             random.shuffle(self.all_decks)
+            # print(self.all_decks)
+            # print(len(self.all_decks))
         else:
-            print('Введено неверное количество колод. Попробуй еще!')
+            conn.send('Введено неверное количество колод. Попробуй еще!'.encode('utf-8'))
 
     def distribution_of_cards(self):
         first_card_of_dealer = self.all_decks.pop()
@@ -57,16 +64,13 @@ class BlackJackGame:
             self.player_score += deck_of_cards[item]
         if self.player_score < 12 and 'ace' in self.hand_of_player:
             self.player_score += 10
-        message = f'У дилера {self.hand_of_dealer[0]} *\nУ игрока {self.hand_of_player[0]} {self.hand_of_player[1]}'
-        return message
+        conn.send(f'\nУ дилера {self.hand_of_dealer[0]} *\nУ игрока {self.hand_of_player[0]} {self.hand_of_player[1]}'.encode('utf-8'))
 
     def ace_check(self, score, hand):
         if score < 12 and 'ace' in hand:
             score += 10
 
     def dealer_strategy(self):
-        hand = ''
-        score = ''
         if self.dealer_score < 17:
             while self.dealer_score < 17:
                 next_card_of_dealer = self.all_decks.pop()
@@ -74,17 +78,16 @@ class BlackJackGame:
                 self.dealer_score += deck_of_cards[next_card_of_dealer]
                 if next_card_of_dealer == 'ace' and self.dealer_score < 12:
                     self.dealer_score += 10
-            score = f'у дилера сумма очков {self.dealer_score}'
+            conn.send(f'\nу дилера сумма очков {self.dealer_score}. На руках карты: '.encode('utf-8'))
         elif self.dealer_score == 21:
-            score = f'У дилера сумма очков {self.dealer_score}. BlackJack'
+            conn.send(f'\nУ дилера сумма очков {self.dealer_score}. BlackJack. На руках карты: '.encode('utf-8'))
         else:
-            score = f'У дилера сумма очков {self.dealer_score}'
-        hand = ' '.join(self.hand_of_dealer)
-        return score, hand
+            conn.send(f'\nУ дилера сумма очков {self.dealer_score}. На руках карты: '.encode('utf-8'))
+        conn.send(' '.join(self.hand_of_dealer).encode('utf-8'))
 
-    def player_strategy(self, act):
-        hand = ''
-        score = ''
+    def player_strategy(self):
+        conn.send('\nЧтобы взять карту введи "hit"'.encode('utf-8'))
+        act = conn.recv(1024).decode('utf-8')
         if act == 'hit':
             next_card_of_player = self.all_decks.pop()
             self.hand_of_player.append(next_card_of_player)
@@ -95,56 +98,37 @@ class BlackJackGame:
         else:
             pass
         if self.player_score == 21:
-            score = f'У игрока сумма очков {self.player_score}. BlackJack'
+            conn.send(f'\nУ игрока сумма очков {self.player_score}. BlackJack. На руках карты: '.encode('utf-8'))
         else:
-            score = f'У игрока сумма очков {self.player_score}'
-        hand = ' '.join(self.hand_of_player)
-        return score, hand
+            conn.send(f'\nУ игрока сумма очков {self.player_score}. На руках карты: '.encode('utf-8'))
+        conn.send(' '.join(self.hand_of_player).encode('utf-8'))
 
     def result(self):
-        WIN = 'Игрок выиграл'
-        BALCK_JACK = 'BlackJack! Игрок выиграл'
-        LOOSE ='Игрок проиграл.'
-        NONE = 'Ничья.'
         if self.player_score > 21:
-            message = LOOSE
-            return message
+            conn.send('\nИгрок проиграл.'.encode('utf-8'))
         elif self.player_score == self.dealer_score:
-            message = NONE
-            return message
+            conn.send('\nНичья.'.encode('utf-8'))
         elif self.player_score == 21:
-            message = BALCK_JACK
-            return message
+            conn.send('\nBlackJack! Игрок выиграл'.encode('utf-8'))
         elif self.player_score > self.dealer_score:
-            message = WIN
-            return message
+            conn.send('\nИгрок выиграл'.encode('utf-8'))
         elif self.player_score < self.dealer_score and self.dealer_score > 21:
-            message = WIN
-            return message
+            conn.send('\nИгрок выиграл'.encode('utf-8'))
         else:
-            message = LOOSE
-            return message
+            conn.send('\nИгрок проиграл.'.encode('utf-8'))
 
-    def play(self, num, act):
-        self.number_of_decks(num)
+    def play(self):
+        self.number_of_decks()
         self.distribution_of_cards()
-        self.player_strategy(act)
+        self.player_strategy()
         self.dealer_strategy()
         self.result()
+        conn.close()
 
 
-# SERVER PART
+game1 = BlackJackGame()
+game1.play()
 
-sock = socket.socket()
-sock.bind(('', 9090))
-sock.listen(1)
-conn, addr = sock.accept()
 
-while True:
-    sock.send(b'wanna, play?')
-    data = conn.recv(1024)
-    if not data:
-        break
-    conn.send(data.upper())
 
-conn.close()
+
